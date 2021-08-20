@@ -1,0 +1,94 @@
+---
+# Source: sherweb-release/templates/servicesAccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: featureflags
+  namespace: default
+---
+# Source: sherweb-release/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: featureflags
+  namespace: default
+data:
+---
+# Source: sherweb-release/templates/servicesAccount.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: featureflags
+  namespace: default
+rules:
+  - apiGroups: ['']
+    resources: ['secrets']
+    verbs: ["get", "patch", "create", "update"]
+---
+# Source: sherweb-release/templates/servicesAccount.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: featureflags
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: featureflags
+subjects:
+  - kind: ServiceAccount
+    name: featureflags
+---
+# Source: sherweb-release/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: featureflags
+  labels:
+    app: featureflags
+    deployed: "featureflags-0.0.2"
+  namespace: default
+spec:
+  selector:
+    app: featureflags
+  ports:
+    - name: featureflags
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+# Source: sherweb-release/templates/deploiement.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: featureflags
+  labels:
+    app: featureflags
+    deployed: "featureflags-0.0.2"
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: featureflags
+  template:
+    metadata:
+      name: featureflags
+      labels:
+        app: featureflags
+        deployed: "featureflags-0.0.2"
+        sidecar.istio.io/inject: "true"
+        # traffic.sidecar.istio.io/excludeOutboundPorts: "8200"
+        environment: dev
+    spec:
+      serviceAccountName: "featureflags"
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: featureflags
+          image: "acr0opp0dev0main0sw.azurecr.io/featureflags:0.0.2"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: featureflags
+              containerPort: 8080
